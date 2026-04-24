@@ -16,12 +16,17 @@ def update_rates():
     response = requests.get(url)
     root = ET.fromstring(response.text)
     exchange_rate.clear()
+
     for valute in root.findall("Valute"):
         code = valute.find("CharCode").text
+        nominal = int(valute.find("Nominal").text)
+        value = float(valute.find("Value").text.replace(",", "."))
+        rate = value / nominal
+
         exchange_rate[code] = Currency(
             code,
             valute.find("Name").text,
-            valute.find("Value").text.replace(",", ".")
+            rate            
         )
     print(exchange_rate)
 update_rates()
@@ -30,6 +35,11 @@ update_rates()
 def get_text_message(message):
     user_input = message.text.strip().upper()
     users.add(message.chat.id) 
+
+    if user_input == "/HELP":
+        text = "Валюты: \n" + " ".join(exchange_rate.keys())
+        bot.send_message(message.from_user.id, text)
+        return
 
     if exchange_rate[user_input]:
         bot.send_message(message.from_user.id, exchange_rate[user_input].show_currency())
@@ -47,7 +57,7 @@ def send_to_users():
 
 
 scheduler.add_job(update_rates, 'cron', hour=12, minute=0)
-scheduler.add_job(send_to_users, 'cron', hour=12, minute=0)
+scheduler.add_job(send_to_users, 'cron', hour=13, minute=24)
 scheduler.start()
         
 bot.polling(none_stop=True, interval=0)
